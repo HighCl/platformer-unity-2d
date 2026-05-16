@@ -1,18 +1,25 @@
 # Platformer Unity 2D
 
 Unity 6.0.3, URP 2D 기반 2D 플랫포머 에셋 데모 프로젝트.
-아트 디자이너가 AI(Cursor/Claude Code)와 함께 작업하는 것을 전제로 구성된 가드레일 환경.
+아트 디자이너가 AI(Codex)와 함께 작업하는 것을 전제로 구성된 가드레일 환경.
 
 ## 작업 시작 전 필수 확인
 
-Unity MCP 연결이 되어있어야 에디터 제어(컴파일 체크, 씬 조작, 테스트)가 가능하다.
-작업 시작 전 반드시 연결 상태를 확인할 것.
+Unity MCP는 이 프로젝트에서 사용하지 않는다.
+코드 변경 후에는 Unity 에디터에서 `Assets > Refresh` 또는 `Ctrl+R`로 반영하고, `Console`과 `Test Runner`로 검증한다.
+씬/프리팹/에셋 조작이 필요하면 Codex가 파일을 직접 편집하지 않고, Unity 에디터에서 수행할 단계를 사용자에게 안내한다.
 
-```bash
-unity-mcp-cli run-tool assets-refresh --input '{}'
-```
+## Codex 스킬 규칙
 
-SUCCESS가 나오면 정상. 에러가 나오면 setup-mcp 스킬을 실행해서 연결을 세팅할 것.
+Cursor의 `.cursor/rules`는 Codex에서 자동 적용되지 않는다.
+Codex 작업 시에는 `.agents/skills/`의 프로젝트 전용 스킬을 사용한다.
+
+- `platformer-guardrails`: 프로젝트 작업 시작 시 최상위 가드레일
+- `platformer-architecture`: 어셈블리 경계, Game/UI 분리, Unity 직렬화 보호
+- `platformer-coding-style`: C# 네이밍, 폴더 구조, Input System, 테스트 규칙
+- `platformer-game-logic`: Core/Game 물리, 이동, 적 AI, 스톰프, 사망 처리 규칙
+- `platformer-ui`: UI, Canvas, TMP, SO 이벤트 구독 규칙
+- `platformer-unity-nondev-basics`: 비개발자용 Unity 설명과 수동 조작 안내
 
 ## 어셈블리 맵
 
@@ -116,10 +123,10 @@ Assets/_Project/
 이 파일들은 Unity YAML Serialization 포맷이라 fileID/GUID 참조가 얽혀 있어서, 직접 편집하면 참조가 깨진다.
 
 씬/프리팹/에셋 조작이 필요하면:
-- MCP 가용 시: script-execute 또는 MCP 도구(gameobject-*, assets-prefab-* 등) 사용
-- MCP 불가 시: 사용자에게 에디터 조작을 단계별로 안내
+- 사용자에게 Unity 에디터 조작을 단계별로 안내
+- 자동화가 꼭 필요하면 Unity Editor 스크립트를 별도 코드로 작성하되, `.unity`, `.prefab`, `.asset`, `.controller`, `.anim` 파일을 직접 텍스트 편집하지 않는다
 
-유일한 예외: SO(.asset)의 단순 값 수정은 YAML sed + assets-refresh 허용 (ScriptableObject 수정 주의사항 참고).
+유일한 예외: SO(.asset)의 단순 값 수정은 YAML 직접 수정 후 Unity 에디터 Refresh 허용 (ScriptableObject 수정 주의사항 참고).
 
 ### Arts/ 폴더 스크립트 금지
 Arts/ 하위에는 스프라이트, 애니메이션, 타일셋, VFX, 오디오 에셋만. .cs 파일 절대 넣지 말 것.
@@ -153,43 +160,33 @@ void OnEnable() => _input.Enable();
 void OnDisable() => _input.Disable();
 ```
 
-## Unity MCP 활용
+## Unity 에디터 검증
 
-코드 수정 후 반드시 assets-refresh로 컴파일 상태를 확인할 것.
-프로젝트 루트에서 실행해야 한다.
+코드 수정 후 반드시 Unity 에디터에 변경사항을 반영하고 컴파일 상태를 확인할 것.
 
-```bash
-# 코드 수정 후 에디터에 반영
-unity-mcp-cli run-tool assets-refresh --input '{}'
-
+```powershell
 # 컴파일 에러 확인
-grep -n "error CS" ~/Library/Logs/Unity/Editor.log | tail -30
+Get-Content "$env:LOCALAPPDATA\Unity\Editor\Editor.log" -Tail 300 | Select-String "error CS"
 
 # 런타임 에러 확인
-grep -n "NullReferenceException\|InvalidOperationException\|MissingReferenceException" ~/Library/Logs/Unity/Editor.log | tail -20
+Get-Content "$env:LOCALAPPDATA\Unity\Editor\Editor.log" -Tail 300 | Select-String "NullReferenceException|InvalidOperationException|MissingReferenceException"
 
 # 경고 확인
-grep -n "warning CS" ~/Library/Logs/Unity/Editor.log | tail -20
-
-# 씬 하이라키 탐색, 컴포넌트 일괄 조회 등 (class + static method 구조 필수)
-unity-mcp-cli run-tool script-execute --input-file - <<'SCRIPT'
-{"csharpCode": "using UnityEngine;\npublic class Script { public static object Main() { return \"hello\"; } }"}
-SCRIPT
+Get-Content "$env:LOCALAPPDATA\Unity\Editor\Editor.log" -Tail 300 | Select-String "warning CS"
 ```
 
 검증 흐름:
 1. 코드 수정
-2. `unity-mcp-cli run-tool assets-refresh --input '{}'` — 에디터에 반영
-3. `grep -n "error CS" ~/Library/Logs/Unity/Editor.log | tail -30` — 컴파일 에러 확인
+2. Unity 에디터에서 `Assets > Refresh` 또는 `Ctrl+R` 실행
+3. `Console` 창 또는 `Editor.log`에서 컴파일 에러 확인
 4. 에러 있으면 수정 후 1번부터 반복
-5. `unity-mcp-cli run-tool tests-run --input '{}'` — 테스트 통과 확인
+5. `Window > General > Test Runner`에서 테스트 통과 확인
 
 ## 테스트
 
 테스트 실행:
-```bash
-unity-mcp-cli run-tool tests-run --input '{}'
-```
+- Unity 메뉴 `Window > General > Test Runner` 열기
+- `Run All` 실행
 
 테스트 파일 위치: 각 어셈블리의 Tests/ 폴더
 - Scripts/Data/Tests/
@@ -204,13 +201,8 @@ unity-mcp-cli run-tool tests-run --input '{}'
 assets-modify로 SO를 부분 수정하면 명시하지 않은 필드가 기본값(0)으로 리셋될 수 있다.
 
 SO 에셋 수정이 필요할 때:
-- 안전한 방법: YAML 직접 수정(sed 등) + assets-refresh 조합
+- 안전한 방법: YAML 직접 수정 + Unity 에디터 Refresh 조합
 - assets-modify는 전체 필드를 다 지정할 때만 사용
-
-```bash
-# YAML 직접 수정 후 Unity에 반영
-unity-mcp-cli run-tool assets-refresh --input '{}'
-```
 
 ## 커밋 컨벤션
 

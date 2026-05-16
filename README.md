@@ -1,6 +1,6 @@
 # platformer-unity-2d
 
-유니티를 모르는 아트 디자이너가 AI(Cursor / Claude Code)와 함께 2D 플랫포머 게임을 만들 수 있도록 설계된 가드레일 환경.
+유니티를 모르는 아트 디자이너가 AI(Codex)와 함께 2D 플랫포머 게임을 만들 수 있도록 설계된 가드레일 환경.
 
 ## 배경
 
@@ -11,23 +11,23 @@
 - Unity 6.0.3 (URP 2D)
 - Input System
 - 2D Animation / Tilemap
-- [Unity MCP](https://github.com/IvanMurzak/Unity-MCP) (에디터 원격 제어)
 
 ## 가드레일 구조
 
 BPE에서 검증된 3단 방어 패턴을 Unity에 적용.
 
-### 1단계 — AI 규칙 (.cursor/rules/, CLAUDE.md)
+### 1단계 — Codex 스킬 규칙 (.agents/skills/)
 
 | 규칙 | 적용 | 역할 |
 |---|---|---|
-| architecture.mdc | 항상 | 어셈블리 경계, import 규칙, 플레이 모드 규칙 |
-| coding-style.mdc | 항상 | 네이밍, 라이프사이클, Input System, 컴파일 확인 |
-| game-logic.mdc | Game/, Core/ | 물리 패턴, 콜라이더, 타일맵, 입력 처리 |
-| ui.mdc | UI/ | Canvas 규칙, 이벤트 구독, Game 참조 금지 |
-| unity-nondev-basics.mdc | 요청 시 | Unity 용어 쉬운 설명, 자주 생기는 문제/해결 |
+| platformer-guardrails | 프로젝트 작업 시작 시 | Codex 최상위 가드레일, 세부 스킬 선택 |
+| platformer-architecture | 코드/씬/프리팹/에셋 작업 | 어셈블리 경계, Game/UI 분리, Unity 직렬화 보호 |
+| platformer-coding-style | 코드 작성/수정 | 네이밍, 라이프사이클, Input System, 컴파일 확인 |
+| platformer-game-logic | Game/, Core/ | 물리 패턴, 콜라이더, 타일맵, 입력 처리 |
+| platformer-ui | UI/ | Canvas 규칙, 이벤트 구독, Game 참조 금지 |
+| platformer-unity-nondev-basics | 요청 시 | Unity 용어 쉬운 설명, 자주 생기는 문제/해결 |
 
-### 2단계 — 작업 스킬 (.cursor/skills/, .claude/skills/)
+### 2단계 — 작업 스킬 (.agents/skills/)
 
 | 스킬 | 용도 |
 |---|---|
@@ -39,14 +39,9 @@ BPE에서 검증된 3단 방어 패턴을 Unity에 적용.
 
 ### 3단계 — 검증
 
-```bash
-# 컴파일 체크
-unity-mcp-cli run-tool assets-refresh --input '{}'
-grep -n "error CS" ~/Library/Logs/Unity/Editor.log | tail -30
-
-# 테스트 실행
-unity-mcp-cli run-tool tests-run --input '{}'
-```
+- Unity 에디터에서 `Assets > Refresh` 또는 `Ctrl+R`로 변경사항 반영
+- `Console` 창에서 컴파일 오류 0개 확인
+- `Window > General > Test Runner`에서 `Run All` 실행
 
 ## 어셈블리 구조
 
@@ -93,19 +88,12 @@ Assets/_Project/
 
 ## 세팅 필요 사항
 
-### Unity MCP
+### Codex
 
-```bash
-npm install -g unity-mcp-cli
-unity-mcp-cli install-plugin .
-```
+`.agents/skills/`가 레포에 포함되어 있어 Codex가 프로젝트 전용 가드레일과 작업 절차를 스킬로 사용할 수 있다.
 
-에디터에서 Window → AI Game Developer 열어서 MCP 서버 활성화.
+기존 `.cursor/rules/`는 Cursor 호환 원본 규칙으로 남겨둘 수 있지만, Codex 기준 가드레일은 `.agents/skills/platformer-*` 스킬이다.
 
-### Cursor
+### Cursor / Claude Code
 
-`.cursor/rules/`와 `.cursor/skills/`가 레포에 포함되어 있어 클론 즉시 가드레일 적용.
-
-### Claude Code
-
-`.claude/skills/`가 레포에 포함. CLAUDE.md가 프로젝트 루트에 있어 자동 로드.
+`.cursor/rules/`, `.cursor/skills/`는 호환용으로 유지할 수 있다. 현재 프로젝트의 기본 AI 작업 기준은 Codex와 `.agents/skills/`다.

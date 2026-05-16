@@ -5,18 +5,12 @@ alwaysApply: true
 
 # 어셈블리 경계 규칙
 
-## MCP 가용 여부 확인 (작업 시작 전 필수)
+## Unity 에디터 조작 원칙
 
-작업 시작 전 MCP 연결을 확인한다:
-```bash
-unity-mcp-cli run-tool assets-refresh --input '{}'
-```
-
-- SUCCESS → MCP 모드: script-execute, MCP 도구로 에디터 조작까지 AI가 직접 처리
-- 실패/타임아웃 → 수동 모드: 코드는 AI가 작성, 에디터 조작은 사용자에게 단계별 안내
-
-MCP가 안 되면 /setup-mcp 스킬로 연결 시도. 그래도 안 되면 수동 모드로 진행한다.
-수동 모드에서도 코드 작성, 테스트 작성, 파일 구조 잡기는 전부 AI가 한다. 에디터 조작만 사용자에게 넘긴다.
+Unity MCP는 사용하지 않는다.
+코드 작성, 테스트 작성, 파일 구조 잡기는 AI가 처리한다.
+씬/프리팹/Inspector 조작은 Unity 직렬화 파일을 직접 편집하지 않고 사용자에게 단계별로 안내한다.
+코드 수정 후 Unity 에디터에서 `Assets > Refresh` 또는 `Ctrl+R`로 반영한다.
 
 ## 참조 방향 (절대 위반 금지)
 
@@ -68,27 +62,12 @@ SO 인스턴스는 Assets/_Project/Datas/Events/ 에 저장.
 이 파일들은 Unity YAML Serialization 포맷이라 fileID/GUID 참조가 얽혀 있어서, 직접 편집하면 참조가 깨진다.
 "맵이 어떻게 생겼는지 보겠다"는 이유로 .unity를 Read/cat으로 열면 안 된다.
 
-씬/하이라키/타일맵 정보가 필요하면:
-```bash
-# 하이라키 탐색 — script-execute로
-unity-mcp-cli run-tool script-execute --input-file - <<'SCRIPT'
-{"csharpCode": "using UnityEngine;\nusing System.Linq;\npublic class Script { public static object Main() {\n  var roots = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();\n  return string.Join(\"\\n\", roots.Select(r => r.name));\n} }"}
-SCRIPT
-
-# 특정 오브젝트 컴포넌트 조회
-unity-mcp-cli run-tool gameobject-component-get --input '{"gameObjectPath": "/Grid/Tilemap_Ground", "componentType": "UnityEngine.Tilemaps.Tilemap"}'
-
-# 타일맵 타일 조회 — script-execute로
-unity-mcp-cli run-tool script-execute --input-file - <<'SCRIPT'
-{"csharpCode": "using UnityEngine;\nusing UnityEngine.Tilemaps;\npublic class Script { public static object Main() {\n  var tm = GameObject.Find(\"Tilemap_Ground\")?.GetComponent<Tilemap>();\n  if (tm == null) return \"Tilemap 없음\";\n  var bounds = tm.cellBounds;\n  int count = 0;\n  foreach (var pos in bounds.allPositionsWithin) if (tm.GetTile(pos) != null) count++;\n  return $\"범위: {bounds}, 타일 수: {count}\";\n} }"}
-SCRIPT
-```
+씬/하이라키/타일맵 정보가 필요하면 사용자에게 Unity 에디터에서 확인할 항목을 단계별로 요청한다.
 
 씬/프리팹/에셋 수정이 필요하면:
-- MCP 가용 시: script-execute 또는 MCP 도구(gameobject-*, assets-prefab-* 등) 사용
-- MCP 불가 시: 사용자에게 에디터 조작을 단계별로 안내
+- 사용자에게 에디터 조작을 단계별로 안내
 
-유일한 예외: SO(.asset)의 단순 값 수정은 YAML sed + assets-refresh 허용.
+유일한 예외: SO(.asset)의 단순 값 수정은 YAML 직접 수정 후 Unity 에디터 Refresh 허용.
 
 ## 금지 패턴
 
@@ -127,25 +106,19 @@ if (UnityEditor.EditorApplication.isPlaying)
 ## 코드 수정 후 검증 흐름
 
 1. 코드 수정
-2. `unity-mcp-cli run-tool assets-refresh --input '{}'` — 에디터에 반영
-3. `grep -n "error CS" ~/Library/Logs/Unity/Editor.log | tail -30` — 컴파일 에러 확인
+2. Unity 에디터에서 `Assets > Refresh` 또는 `Ctrl+R` 실행
+3. `Console` 창 또는 `Editor.log`에서 컴파일 에러 확인
 4. 에러 있으면 수정 후 1번부터 반복
 
-```bash
-# 에디터 반영
-unity-mcp-cli run-tool assets-refresh --input '{}'
-
+```powershell
 # 컴파일 에러 확인
-grep -n "error CS" ~/Library/Logs/Unity/Editor.log | tail -30
+Get-Content "$env:LOCALAPPDATA\Unity\Editor\Editor.log" -Tail 300 | Select-String "error CS"
 
 # 런타임 에러 확인
-grep -n "NullReferenceException\|InvalidOperationException\|MissingReferenceException" ~/Library/Logs/Unity/Editor.log | tail -20
+Get-Content "$env:LOCALAPPDATA\Unity\Editor\Editor.log" -Tail 300 | Select-String "NullReferenceException|InvalidOperationException|MissingReferenceException"
 ```
 
 에러 0 확인될 때까지 다음 작업으로 넘어가지 말 것.
-
-script-execute는 씬 하이라키 탐색, 컴포넌트 일괄 조회 등 일괄 작업에만 사용.
-단일 오브젝트 조작은 개별 MCP 툴(assets-get 등) 사용.
 
 ## 커밋 컨벤션
 
