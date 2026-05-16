@@ -1,0 +1,94 @@
+{
+  "version": 2,
+  "mode": "codebase",
+  "name": "Platformer Unity 2D",
+  "sources": [
+    {
+      "path": "./",
+      "exclude": [
+        ".git/",
+        ".claude/",
+        ".cursor/",
+        ".serena/",
+        "Library/",
+        "Logs/",
+        "Temp/",
+        "UserSettings/",
+        "wiki/",
+        "Assets/**/*.meta",
+        "Assets/**/*.prefab",
+        "Assets/**/*.unity",
+        "Assets/**/*.asset",
+        "Assets/**/*.controller",
+        "Assets/**/*.anim"
+      ]
+    }
+  ],
+  "output": "wiki/",
+  "service_discovery": "auto",
+  "knowledge_files": [
+    "README.md",
+    "AGENTS.md",
+    ".agents/skills/*/SKILL.md",
+    "Packages/manifest.json",
+    "Packages/packages-lock.json",
+    "ProjectSettings/ProjectVersion.txt",
+    "Assets/_Project/Scripts/**/*.asmdef"
+  ],
+  "deep_scan": true,
+  "code_extensions": [
+    ".cs",
+    ".asmdef",
+    ".json",
+    ".md",
+    ".txt"
+  ],
+  "auto_update": "prompt",
+  "article_sections": [
+    {
+      "name": "Purpose",
+      "description": "이 모듈 또는 영역이 담당하는 역할과 의존하는 사용자/시스템",
+      "required": true
+    },
+    {
+      "name": "Architecture",
+      "description": "핵심 파일, 클래스 구조, 엔트리 포인트, 어셈블리 경계"
+    },
+    {
+      "name": "Talks To",
+      "description": "다른 어셈블리, ScriptableObject, Unity 패키지, 씬/프리팹과의 연결 방식"
+    },
+    {
+      "name": "API Surface",
+      "description": "외부에서 호출하거나 참조하는 public 메서드, 인터페이스, 이벤트, 테스트 진입점"
+    },
+    {
+      "name": "Data",
+      "description": "ScriptableObject, 런타임 상태, 설정값, 입력 액션, 테스트 데이터"
+    },
+    {
+      "name": "Key Decisions",
+      "description": "현재 구조가 선택된 이유, 프로젝트 규칙, 변경 이력에서 드러나는 결정"
+    },
+    {
+      "name": "Gotchas",
+      "description": "주의할 점, 깨지기 쉬운 경계, Unity 직렬화/어셈블리/테스트 관련 위험"
+    },
+    {
+      "name": "Sources",
+      "description": "이 문서에 기여한 모든 원본 파일 링크",
+      "required": true
+    }
+  ],
+  "topic_hints": [
+    "project-overview",
+    "core-runtime",
+    "data-events-state",
+    "gameplay-systems",
+    "ui-hud",
+    "testing",
+    "agent-workflow",
+    "unity-project-configuration"
+  ],
+  "link_style": "markdown"
+}
