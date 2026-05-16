@@ -24,7 +24,7 @@ status: active
 참조 방향은 `Data <- Core <- Game` 및 `Data/Core <- UI` 형태다. `Game`과 `UI`는 직접 참조하지 않고 ScriptableObject 이벤트 채널로만 통신한다.
 
 ## Talks To [coverage: medium -- 4 sources]
-- **Unity MCP**: `unity-mcp-cli run-tool assets-refresh --input '{}'`로 에디터 연결과 컴파일 반영을 확인한다.
+- **Unity Editor**: `Assets > Refresh`, `Console`, `Test Runner`로 반영과 검증을 확인한다.
 - **Unity Input System**: `PlayerController`는 생성된 `InputSystem_Actions` 래퍼로 `Move`, `Jump` 액션을 읽는다.
 - **URP 2D/2D 패키지**: 스프라이트, 타일맵, 2D Animation, SpriteShape, Tilemap Extras가 프로젝트 전제다.
 - **Codex 스킬**: 작업 유형별 세부 절차는 `.agents/skills/`에 저장된다.
@@ -32,8 +32,8 @@ status: active
 ## API Surface [coverage: medium -- 4 sources]
 프로젝트 레벨의 외부 진입점은 명령과 문서 규칙 중심이다.
 
-- `unity-mcp-cli run-tool assets-refresh --input '{}'`: 컴파일 반영 및 MCP 연결 확인
-- `unity-mcp-cli run-tool tests-run --input '{}'`: Unity 테스트 실행
+- `Assets > Refresh` 또는 `Ctrl+R`: Unity 에디터 변경사항 반영
+- `Window > General > Test Runner`: Unity 테스트 실행
 - `.agents/skills/*/SKILL.md`: Codex 작업 절차
 - `AGENTS.md`: 어셈블리, 코딩, 검증, 커밋 규칙
 
@@ -44,7 +44,7 @@ status: active
 - **어셈블리 경계 우선**: Game/UI 순환 참조 방지를 위해 어셈블리 참조 방향을 명시했다.
 - **SO 이벤트 채널 사용**: Game과 UI의 직접 참조를 금지하고 `GameEvent`로 통신한다.
 - **Codex 스킬 전환**: Cursor 규칙 자동 적용 한계를 보완하기 위해 `.agents/skills/platformer-*`가 Codex 기준 규칙으로 추가되었다.
-- **Unity YAML 보호**: `.unity`, `.prefab`, `.asset`, `.controller`, `.anim`은 MCP 또는 Unity API로 조작한다.
+- **Unity YAML 보호**: `.unity`, `.prefab`, `.asset`, `.controller`, `.anim`은 텍스트 직접 편집 대신 Unity 에디터에서 조작한다.
 
 ## Gotchas [coverage: high -- 7 sources]
 - `Assets/_Project/Prefabs/Player.prefab` 같은 Unity 직렬화 파일은 변경되어 있어도 위키 컴파일에서 직접 열어 해석하지 않는다.

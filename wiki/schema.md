@@ -10,12 +10,12 @@
 - `gameplay-systems`: 체크포인트, 피니시 플래그, 적, 이동 플랫폼, Game 어셈블리
 - `ui-hud`: HUD, UI 이벤트 구독, UI 어셈블리 규칙
 - `testing`: Editor/PlayMode 테스트, 테스트 어셈블리, 현재 실패 위험
-- `agent-workflow`: `.agents/skills` 기반 Codex 작업 절차와 MCP 폴백
+- `agent-workflow`: `.agents/skills` 기반 Codex 작업 절차와 Unity 에디터 수동 조작 안내
 - `unity-project-configuration`: Unity 버전, 패키지, `.asmdef`, 테스트 러너 설정
 
 ## Concepts
 
-- `guardrail-first-development`: 구현 전 가드레일, MCP 확인, 테스트, 어셈블리 경계를 우선하는 개발 패턴 - connects [project-overview, agent-workflow, testing, unity-project-configuration]
+- `guardrail-first-development`: 구현 전 가드레일, 테스트, 어셈블리 경계를 우선하는 개발 패턴 - connects [project-overview, agent-workflow, testing, unity-project-configuration]
 
 ## Article Structure
 
@@ -42,7 +42,7 @@ Coverage 태그는 `[coverage: high -- N sources]`, `[coverage: medium -- N sour
 
 ## Cross-Reference Rules
 
-- Game/UI 경계, MCP, 테스트, Unity 직렬화 보호처럼 여러 토픽에 걸친 규칙은 관련 토픽의 Gotchas 또는 Key Decisions에 반복 기재한다.
+- Game/UI 경계, 테스트, Unity 직렬화 보호처럼 여러 토픽에 걸친 규칙은 관련 토픽의 Gotchas 또는 Key Decisions에 반복 기재한다.
 - Unity 직렬화 에셋은 원본 링크로만 언급하고 직접 해석하지 않는다.
 - 변경 소스가 테스트 결과에 직접 영향을 주면 `testing` 토픽에 반드시 반영한다.
 

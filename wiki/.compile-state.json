@@ -24,7 +24,6 @@
     ".agents/skills/platformer-ui/SKILL.md",
     ".agents/skills/platformer-unity-nondev-basics/SKILL.md",
     ".agents/skills/replace-sprite/SKILL.md",
-    ".agents/skills/setup-mcp/SKILL.md",
     "AGENTS.md",
     "Assets/_Project/Scripts/Core/PlayModeTests/Platformer.Core.PlayModeTests.asmdef",
     "Assets/_Project/Scripts/Core/PlayModeTests/PlayerControllerPlayModeTests.cs",
@@ -78,12 +77,11 @@
     ".agents/skills/platformer-ui/SKILL.md",
     ".agents/skills/platformer-unity-nondev-basics/SKILL.md",
     ".agents/skills/replace-sprite/SKILL.md",
-    ".agents/skills/setup-mcp/SKILL.md",
     "AGENTS.md",
     "Assets/_Project/Scripts/Core/PlayModeTests/Platformer.Core.PlayModeTests.asmdef",
     "Assets/_Project/Scripts/Core/PlayModeTests/PlayerControllerPlayModeTests.cs",
     "Assets/_Project/Scripts/Data/Tests/RespawnDataTests.cs",
     "ProjectSettings/ProjectVersion.txt"
   ],
-  "total_sources_scanned": 52
+  "total_sources_scanned": 51
 }

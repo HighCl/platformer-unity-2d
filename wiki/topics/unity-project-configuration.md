@@ -19,10 +19,8 @@ Unity 프로젝트 설정 토픽은 Unity 버전, 패키지 의존성, 어셈블
 - URP: `com.unity.render-pipelines.universal` 17.3.0
 - Input System: `com.unity.inputsystem` 1.19.0
 - Unity Test Framework: `com.unity.test-framework` 1.6.0
-- Unity MCP: `com.ivanmurzak.unity.mcp` 0.63.1
 
 ## Talks To [coverage: medium -- 5 sources]
-- **OpenUPM Registry**: `com.ivanmurzak`, `extensions.unity`, `org.nuget.*` 스코프를 `https://package.openupm.com`에서 받는다.
 - **Assembly Definition**: 런타임과 테스트 어셈블리가 명시적 참조를 가진다.
 - **Unity Test Runner**: 테스트 어셈블리는 `UnityEngine.TestRunner`, `UnityEditor.TestRunner`, `nunit.framework.dll`을 참조한다.
 
@@ -34,7 +32,7 @@ Unity 프로젝트 설정 토픽은 Unity 버전, 패키지 의존성, 어셈블
 
 ## Key Decisions [coverage: medium -- 5 sources]
 - **명시적 어셈블리 경계**: 모든 주요 코드 영역에 `.asmdef`를 두어 참조 가능 범위를 제한한다.
-- **Unity MCP 포함**: 에디터 원격 제어와 검증 자동화를 위해 MCP 패키지가 의존성에 포함되어 있다.
+- **Unity 기본 패키지 중심 구성**: 패키지는 Unity 공식 레지스트리와 프로젝트 필수 2D/테스트 의존성 중심으로 유지한다.
 - **Input System 사용**: 레거시 입력 대신 생성된 Input System 래퍼를 사용한다.
 
 ## Gotchas [coverage: high -- 8 sources]

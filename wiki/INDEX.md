@@ -13,7 +13,7 @@ Total topics: 8 | Total sources: 52
 | [gameplay-systems](topics/gameplay-systems.md) | Game, Enemy, MovingPlatform, Checkpoint, FinishFlag | 10 | 2026-05-16 | active |
 | [ui-hud](topics/ui-hud.md) | UI, HUDController, Canvas, GameEvent 구독 | 5 | 2026-05-16 | active |
 | [testing](topics/testing.md) | Tests, PlayMode, NUnit, Test Runner | 16 | 2026-05-16 | active |
-| [agent-workflow](topics/agent-workflow.md) | Codex skills, .agents, MCP, guardrails | 13 | 2026-05-16 | active |
+| [agent-workflow](topics/agent-workflow.md) | Codex skills, .agents, guardrails | 13 | 2026-05-16 | active |
 | [unity-project-configuration](topics/unity-project-configuration.md) | Unity version, packages, asmdef, manifest | 8 | 2026-05-16 | active |
 
 ## Concepts

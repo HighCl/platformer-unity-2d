@@ -5,7 +5,6 @@ Unity 6.0.3, URP 2D 기반 2D 플랫포머 에셋 데모 프로젝트.
 
 ## 작업 시작 전 필수 확인
 
-Unity MCP는 이 프로젝트에서 사용하지 않는다.
 코드 변경 후에는 Unity 에디터에서 `Assets > Refresh` 또는 `Ctrl+R`로 반영하고, `Console`과 `Test Runner`로 검증한다.
 씬/프리팹/에셋 조작이 필요하면 Codex가 파일을 직접 편집하지 않고, Unity 에디터에서 수행할 단계를 사용자에게 안내한다.
 

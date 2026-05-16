@@ -9,7 +9,7 @@ status: active
 # Testing
 
 ## Purpose [coverage: high -- 16 sources]
-테스트 영역은 각 어셈블리별 Editor 테스트와 신규 Core PlayMode 테스트를 포함한다. 프로젝트 규칙상 새 기능에는 대응 테스트가 필요하며, Unity MCP로 `tests-run`을 실행하는 흐름이 표준 검증 경로다.
+테스트 영역은 각 어셈블리별 Editor 테스트와 신규 Core PlayMode 테스트를 포함한다. 프로젝트 규칙상 새 기능에는 대응 테스트가 필요하며, Unity Test Runner에서 실행하는 흐름이 표준 검증 경로다.
 
 현재 변경분 중 가장 중요한 항목은 `RespawnDataTests.cs`에 의도적 실패 테스트가 추가된 점과 `Core/PlayModeTests`에 `PlayerController` 이동 검증 테스트가 새로 생긴 점이다.
 
@@ -30,7 +30,7 @@ status: active
 - **UnityEditor**: 일부 Game 테스트는 `AssetDatabase`, `SerializedObject`로 프리팹 연결을 검증한다.
 
 ## API Surface [coverage: medium -- 4 sources]
-- `unity-mcp-cli run-tool tests-run --input '{}'`: 프로젝트 테스트 실행 명령
+- Unity 메뉴 `Window > General > Test Runner`: 프로젝트 테스트 실행 진입점
 - `PlayerControllerPlayModeTests.MainScene_Player_PressDForOneSecond_IncreasesXByExpectedDistanceWithinTenPercent()`: Main 씬에서 D 키 1초 입력 후 x축 이동량 검증
 - `RespawnDataTests.SetCheckpoint_IntentionalFailure_ForTestRunnerCheck()`: 테스트 러너 확인용 의도적 실패 케이스
 
