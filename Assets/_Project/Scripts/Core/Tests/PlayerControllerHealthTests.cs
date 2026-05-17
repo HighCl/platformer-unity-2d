@@ -21,6 +21,41 @@ namespace Platformer.Core.Tests
         }
 
         [Test]
+        public void PlayerController_Awake_InitializesJumpCountToThree()
+        {
+            var go = _CreatePlayerObject(out var player);
+
+            Assert.AreEqual(3, player.MaxJumpCount);
+            Assert.AreEqual(3, player.RemainingJumpCount);
+
+            Object.DestroyImmediate(go);
+        }
+
+        [Test]
+        public void PlayerController_SetRemainingJumpCount_RaisesJumpCountChangedEvent()
+        {
+            var go = _CreatePlayerObject(out var player);
+            var jumpCountEvent = ScriptableObject.CreateInstance<PlayerJumpCountEvent>();
+            var receivedRemainingValues = new List<int>();
+            var receivedMaxValues = new List<int>();
+            jumpCountEvent.AddListener((remainingJumpCount, maxJumpCount) =>
+            {
+                receivedRemainingValues.Add(remainingJumpCount);
+                receivedMaxValues.Add(maxJumpCount);
+            });
+            _SetPrivateField(player, "_onJumpCountChanged", jumpCountEvent);
+
+            _InvokePrivateMethod(player, "_SetRemainingJumpCount", 2, false);
+
+            CollectionAssert.AreEqual(new[] { 2 }, receivedRemainingValues);
+            CollectionAssert.AreEqual(new[] { 3 }, receivedMaxValues);
+            Assert.AreEqual(2, player.RemainingJumpCount);
+
+            Object.DestroyImmediate(go);
+            Object.DestroyImmediate(jumpCountEvent);
+        }
+
+        [Test]
         public void PlayerController_TakeDamageOne_ReducesHealthAndKeepsAlive()
         {
             var go = _CreatePlayerObject(out var player);
@@ -180,6 +215,12 @@ namespace Platformer.Core.Tests
         {
             var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
             field.SetValue(target, value);
+        }
+
+        private void _InvokePrivateMethod(object target, string methodName, params object[] args)
+        {
+            var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
+            method.Invoke(target, args);
         }
     }
 }

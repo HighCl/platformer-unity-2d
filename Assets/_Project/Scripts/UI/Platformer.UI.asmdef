@@ -4,7 +4,8 @@
     "references": [
         "Platformer.Data",
         "Platformer.Core",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

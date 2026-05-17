@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 using Platformer.Data;
 
 namespace Platformer.UI
@@ -8,17 +9,22 @@ namespace Platformer.UI
     {
         [SerializeField] private GameEvent _onPlayerDied;
         [SerializeField] private PlayerHealthEvent _onHealthChanged;
+        [SerializeField] private PlayerJumpCountEvent _onJumpCountChanged;
         [SerializeField] private Slider _healthGaugeSlider;
         [SerializeField] private Image _healthGaugeFillImg;
         [SerializeField] private Image[] _healthSlotImgs;
+        [SerializeField] private TMP_Text _remainingJumpCountTMP;
         [SerializeField] private Color _healthFilledColor = new Color(1f, 0.45f, 0.45f, 1f);
         [SerializeField] private Color _healthEmptyColor = new Color(0.45f, 0.45f, 0.45f, 1f);
 
         private float _currentHealthFillAmount = 1f;
         private int _currentHealth = 3;
         private int _maxHealth = 3;
+        private int _remainingJumpCount = 3;
+        private int _maxJumpCount = 3;
 
         public float CurrentHealthFillAmount => _currentHealthFillAmount;
+        public int RemainingJumpCount => _remainingJumpCount;
 
         void Awake()
         {
@@ -32,15 +38,22 @@ namespace Platformer.UI
 
             if (_onHealthChanged != null)
                 _onHealthChanged.AddListener(_HandleHealthChanged);
+
+            if (_onJumpCountChanged != null)
+                _onJumpCountChanged.AddListener(_HandleJumpCountChanged);
         }
 
         void Start()
         {
             _ApplyHealthView(_currentHealth, _maxHealth);
+            _ApplyJumpCountView(_remainingJumpCount, _maxJumpCount);
         }
 
         void OnDisable()
         {
+            if (_onJumpCountChanged != null)
+                _onJumpCountChanged.RemoveListener(_HandleJumpCountChanged);
+
             if (_onHealthChanged != null)
                 _onHealthChanged.RemoveListener(_HandleHealthChanged);
 
@@ -58,14 +71,27 @@ namespace Platformer.UI
             _ApplyHealthSlots(_currentHealth);
         }
 
+        public void RefreshJumpCount(int remainingJumpCount, int maxJumpCount)
+        {
+            _maxJumpCount = Mathf.Max(1, maxJumpCount);
+            _remainingJumpCount = Mathf.Clamp(remainingJumpCount, 0, _maxJumpCount);
+            _ApplyJumpCountText();
+        }
+
         private void _HandlePlayerDied()
         {
             _ApplyHealthView(0, _maxHealth);
+            _ApplyJumpCountView(0, _maxJumpCount);
         }
 
         private void _HandleHealthChanged(int currentHealth, int maxHealth)
         {
             RefreshHealthGauge(currentHealth, maxHealth);
+        }
+
+        private void _HandleJumpCountChanged(int remainingJumpCount, int maxJumpCount)
+        {
+            RefreshJumpCount(remainingJumpCount, maxJumpCount);
         }
 
         private void _ApplyHealthFillAmount(float fillAmount)
@@ -85,6 +111,17 @@ namespace Platformer.UI
         private void _ApplyHealthView(int currentHealth, int maxHealth)
         {
             RefreshHealthGauge(currentHealth, maxHealth);
+        }
+
+        private void _ApplyJumpCountView(int remainingJumpCount, int maxJumpCount)
+        {
+            RefreshJumpCount(remainingJumpCount, maxJumpCount);
+        }
+
+        private void _ApplyJumpCountText()
+        {
+            if (_remainingJumpCountTMP != null)
+                _remainingJumpCountTMP.text = $"{_remainingJumpCount}/{_maxJumpCount}";
         }
 
         private void _ApplyHealthSlots(int currentHealth)

@@ -6,6 +6,7 @@
         "Platformer.Core",
         "Platformer.UI",
         "UnityEngine.UI",
+        "Unity.TextMeshPro",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

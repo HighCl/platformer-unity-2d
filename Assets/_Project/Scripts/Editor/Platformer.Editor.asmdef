@@ -9,6 +9,7 @@
         "UnityEditor.TestRunner",
         "UnityEngine.TestRunner",
         "UnityEngine.UI",
+        "Unity.TextMeshPro",
         "UnityCliConnector.Editor"
     ],
     "includePlatforms": [

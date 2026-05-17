@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using System.Reflection;
+using TMPro;
 using Platformer.Data;
 using UnityEngine;
 using UnityEngine.UI;
@@ -48,6 +49,36 @@ namespace Platformer.UI.Tests
             hud.RefreshHealthGauge(2, 3);
 
             Assert.AreEqual(2f / 3f, hud.CurrentHealthFillAmount, 0.001f);
+        }
+
+        [Test]
+        public void RefreshJumpCount_UpdatesCachedRemainingJumpCountAndText()
+        {
+            var hud = _go.GetComponent<HUDController>();
+            var jumpCountTMP = new GameObject("TMP_JumpCount").AddComponent<TextMeshProUGUI>();
+            _SetPrivateField(hud, "_remainingJumpCountTMP", jumpCountTMP);
+
+            hud.RefreshJumpCount(2, 3);
+
+            Assert.AreEqual(2, hud.RemainingJumpCount);
+            Assert.AreEqual("2/3", jumpCountTMP.text);
+
+            Object.DestroyImmediate(jumpCountTMP.gameObject);
+        }
+
+        [Test]
+        public void RefreshJumpCount_ZeroMaxJumpCount_UsesSafeMaxValue()
+        {
+            var hud = _go.GetComponent<HUDController>();
+            var jumpCountTMP = new GameObject("TMP_JumpCount").AddComponent<TextMeshProUGUI>();
+            _SetPrivateField(hud, "_remainingJumpCountTMP", jumpCountTMP);
+
+            hud.RefreshJumpCount(2, 0);
+
+            Assert.AreEqual(1, hud.RemainingJumpCount);
+            Assert.AreEqual("1/1", jumpCountTMP.text);
+
+            Object.DestroyImmediate(jumpCountTMP.gameObject);
         }
 
         [Test]
@@ -184,6 +215,32 @@ namespace Platformer.UI.Tests
             _DestroyHealthSlots(slotImgs);
             Object.DestroyImmediate(sliderGo);
             Object.DestroyImmediate(healthEvent);
+        }
+
+        [Test]
+        public void JumpCountChangedEvent_ThreeTwoZero_UpdatesText()
+        {
+            var hud = _go.GetComponent<HUDController>();
+            var jumpCountEvent = ScriptableObject.CreateInstance<PlayerJumpCountEvent>();
+            var jumpCountTMP = new GameObject("TMP_JumpCount").AddComponent<TextMeshProUGUI>();
+            _SetPrivateField(hud, "_onJumpCountChanged", jumpCountEvent);
+            _SetPrivateField(hud, "_remainingJumpCountTMP", jumpCountTMP);
+
+            hud.enabled = false;
+            hud.enabled = true;
+
+            jumpCountEvent.Raise(3, 3);
+            Assert.AreEqual("3/3", jumpCountTMP.text);
+
+            jumpCountEvent.Raise(2, 3);
+            Assert.AreEqual("2/3", jumpCountTMP.text);
+
+            jumpCountEvent.Raise(0, 3);
+            Assert.AreEqual("0/3", jumpCountTMP.text);
+
+            hud.enabled = false;
+            Object.DestroyImmediate(jumpCountTMP.gameObject);
+            Object.DestroyImmediate(jumpCountEvent);
         }
 
         private void _SetPrivateField(object target, string fieldName, object value)

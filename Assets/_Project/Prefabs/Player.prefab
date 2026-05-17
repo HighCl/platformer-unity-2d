@@ -182,13 +182,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _respawnData: {fileID: 0}
   _healthSettings: {fileID: 11400000, guid: a983bd1b6b2456548a59e5c5f4bb4f8b, type: 2}
+  _jumpSettings: {fileID: 11400000, guid: 9679b4f546ec0fd45a31543ee765f7e2, type: 2}
   _onHealthChanged: {fileID: 11400000, guid: 78942ac5fee75d54981c068a93091bd4, type: 2}
   _onInvincibilityChanged: {fileID: 11400000, guid: bee6633800760fd479f1cb4a617e6a6e, type: 2}
+  _onJumpCountChanged: {fileID: 11400000, guid: 6efc4489ff8c42d478b5ab96e2938b71, type: 2}
   _onPlayerDied: {fileID: 11400000, guid: eaf4ab20dbf634b4a88affa2f0b8060c, type: 2}
   _spriteRenderer: {fileID: 700000}
   _moveSpeed: 5
   _jumpForce: 10
-  _maxAirJumps: 1
   _fallGravityMultiplier: 2.5
   _fallDeathThreshold: -10
   _groundCheck: {fileID: 410000}

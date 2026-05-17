@@ -11,6 +11,7 @@ namespace Platformer.Core
     {
         #region 상수
         private const int DEFAULT_MAX_HEALTH = 3;
+        private const int DEFAULT_MAX_JUMP_COUNT = 3;
         private const float DEFAULT_INVINCIBLE_DURATION = 0.75f;
         private const float DEFAULT_BLINK_INTERVAL = 0.1f;
         private const float MIN_BLINK_INTERVAL = 0.02f;
@@ -19,13 +20,14 @@ namespace Platformer.Core
         #region 변수
         [SerializeField] private RespawnData _respawnData;
         [SerializeField] private PlayerHealthSettings _healthSettings;
+        [SerializeField] private PlayerJumpSettings _jumpSettings;
         [SerializeField] private PlayerHealthEvent _onHealthChanged;
         [SerializeField] private PlayerInvincibilityEvent _onInvincibilityChanged;
+        [SerializeField] private PlayerJumpCountEvent _onJumpCountChanged;
         [SerializeField] private GameEvent _onPlayerDied;
         [SerializeField] private SpriteRenderer _spriteRenderer;
         [SerializeField] private float _moveSpeed = 5f;
         [SerializeField] private float _jumpForce = 10f;
-        [SerializeField] private int _maxAirJumps = 1;
         [SerializeField] private float _fallGravityMultiplier = 2.5f;
         [SerializeField] private float _fallDeathThreshold = -10f;
         [SerializeField] private Transform _groundCheck;
@@ -41,8 +43,9 @@ namespace Platformer.Core
         private PlayerState _state = PlayerState.Idle;
         private float _moveInput;
         private bool _isJumpRequested;
-        private bool _isAirJumpPending;
-        private int _airJumpsRemaining;
+        private bool _isGroundedLastFrame;
+        private bool _hasJumpedSinceGrounded;
+        private int _remainingJumpCount;
         private int _currentHealth;
         private float _defaultGravityScale;
         private bool _defaultSpriteRendererEnabled = true;
@@ -57,6 +60,10 @@ namespace Platformer.Core
         public int MaxHealth => _healthSettings != null
             ? Mathf.Max(1, _healthSettings.maxHealth)
             : DEFAULT_MAX_HEALTH;
+        public int MaxJumpCount => _jumpSettings != null
+            ? Mathf.Max(1, _jumpSettings.maxJumpCount)
+            : DEFAULT_MAX_JUMP_COUNT;
+        public int RemainingJumpCount => _remainingJumpCount;
         public bool IsInvincible => _isInvincible;
         public bool IsDead => _isDead;
 
@@ -76,6 +83,7 @@ namespace Platformer.Core
             _animator = GetComponent<Animator>();
             _input = new InputSystem_Actions();
             _currentHealth = MaxHealth;
+            _remainingJumpCount = MaxJumpCount;
             _defaultGravityScale = _rb.gravityScale;
             if (_spriteRenderer == null)
                 _spriteRenderer = GetComponentInChildren<SpriteRenderer>(true);
@@ -99,6 +107,7 @@ namespace Platformer.Core
 
             _RaiseHealthChanged();
             _RaiseInvincibilityChanged();
+            _RaiseJumpCountChanged();
         }
 
         void Update()
@@ -112,25 +121,18 @@ namespace Platformer.Core
             var raw = _input.Player.Move.ReadValue<Vector2>();
             _moveInput = raw.x != 0f ? Mathf.Sign(raw.x) : 0f;
 
-            if (_IsGrounded())
-                _airJumpsRemaining = _maxAirJumps;
+            var isGrounded = _IsGrounded();
+            _UpdateJumpCountByGroundState(isGrounded);
 
             if (_input.Player.Jump.WasPressedThisFrame())
             {
-                if (_IsGrounded())
-                {
+                if (_remainingJumpCount > 0)
                     _isJumpRequested = true;
-                    _isAirJumpPending = false;
-                }
-                else if (_airJumpsRemaining > 0)
-                {
-                    _isJumpRequested = true;
-                    _isAirJumpPending = true;
-                }
             }
 
             _UpdateState();
             _UpdateFacing();
+            _isGroundedLastFrame = isGrounded;
         }
 
         void FixedUpdate()
@@ -148,11 +150,8 @@ namespace Platformer.Core
                 _rb.linearVelocity = new Vector2(_moveInput * _moveSpeed + platformVel.x, 0f);
                 _rb.AddForce(Vector2.up * _jumpForce, ForceMode2D.Impulse);
                 _isJumpRequested = false;
-                if (_isAirJumpPending)
-                {
-                    _airJumpsRemaining--;
-                    _isAirJumpPending = false;
-                }
+                _hasJumpedSinceGrounded = true;
+                _SetRemainingJumpCount(_remainingJumpCount - 1);
             }
             else if (isGrounded && platformVel.sqrMagnitude > 0f)
             {
@@ -231,6 +230,38 @@ namespace Platformer.Core
         {
             if (_onInvincibilityChanged != null)
                 _onInvincibilityChanged.Raise(_isInvincible);
+        }
+
+        private void _RaiseJumpCountChanged()
+        {
+            if (_onJumpCountChanged != null)
+                _onJumpCountChanged.Raise(_remainingJumpCount, MaxJumpCount);
+        }
+
+        private void _SetRemainingJumpCount(int value, bool shouldForceRaise = false)
+        {
+            var clampedValue = Mathf.Clamp(value, 0, MaxJumpCount);
+            if (_remainingJumpCount == clampedValue && !shouldForceRaise)
+                return;
+
+            _remainingJumpCount = clampedValue;
+            _RaiseJumpCountChanged();
+        }
+
+        private void _UpdateJumpCountByGroundState(bool isGrounded)
+        {
+            if (isGrounded)
+            {
+                if (!_isGroundedLastFrame)
+                {
+                    _hasJumpedSinceGrounded = false;
+                    _SetRemainingJumpCount(MaxJumpCount);
+                }
+                return;
+            }
+
+            if (_isGroundedLastFrame && !_hasJumpedSinceGrounded)
+                _SetRemainingJumpCount(MaxJumpCount - 1);
         }
 
         private void _StartInvincibility()
@@ -314,11 +345,15 @@ namespace Platformer.Core
             if (_groundCheck == null || _groundOverlapResults == null)
                 return false;
 
-            var n = Physics2D.OverlapCircleNonAlloc(
+            var contactFilter = new ContactFilter2D();
+            contactFilter.SetLayerMask(_groundLayer);
+            contactFilter.useTriggers = Physics2D.queriesHitTriggers;
+
+            var n = Physics2D.OverlapCircle(
                 _groundCheck.position,
                 _groundCheckRadius,
-                _groundOverlapResults,
-                _groundLayer);
+                contactFilter,
+                _groundOverlapResults);
 
             for (var i = 0; i < n; i++)
             {
@@ -388,7 +423,7 @@ namespace Platformer.Core
 
             _moveInput = 0f;
             _isJumpRequested = false;
-            _isAirJumpPending = false;
+            _SetRemainingJumpCount(0, true);
             _rb.linearVelocity = Vector2.zero;
             _rb.gravityScale = 0f;
             _rb.constraints = RigidbodyConstraints2D.FreezePositionX

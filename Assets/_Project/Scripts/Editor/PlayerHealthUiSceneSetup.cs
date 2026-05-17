@@ -11,18 +11,20 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using TMPro;
 
 namespace Platformer.Editor
 {
     [InitializeOnLoad]
     public static class PlayerHealthUiSceneSetup
     {
-        private const string SESSION_KEY = "Platformer.PlayerHealthUiSceneSetup.Done";
         private const string MAIN_SCENE_PATH = "Assets/_Project/Scenes/Main.unity";
         private const string PLAYER_PREFAB_PATH = "Assets/_Project/Prefabs/Player.prefab";
         private const string SETTINGS_PATH = "Assets/_Project/Datas/PlayerHealthSettings_Default.asset";
+        private const string JUMP_SETTINGS_PATH = "Assets/_Project/Datas/PlayerJumpSettings_Default.asset";
         private const string HEALTH_EVENT_PATH = "Assets/_Project/Datas/Events/OnPlayerHealthChanged.asset";
         private const string INVINCIBILITY_EVENT_PATH = "Assets/_Project/Datas/Events/OnPlayerInvincibilityChanged.asset";
+        private const string JUMP_COUNT_EVENT_PATH = "Assets/_Project/Datas/Events/PlayerJumpCountEvent.asset";
         private const string DIED_EVENT_PATH = "Assets/_Project/Datas/Events/OnPlayerDied.asset";
         private const string INVINCIBLE_ICON_PATH = "Assets/_Project/Arts/Sprites/UI/InvincibleIcon_SquareBorder.png";
         private const string SCENE_UI_PREFAB_PATH = "Assets/_Project/Prefabs/UI/SceneUI.prefab";
@@ -44,16 +46,14 @@ namespace Platformer.Editor
                 return;
             }
 
-            if (!force && SessionState.GetBool(SESSION_KEY, false))
-                return;
-
             if (EditorApplication.isCompiling || EditorApplication.isUpdating)
             {
                 EditorApplication.delayCall += Apply;
                 return;
             }
 
-            SessionState.SetBool(SESSION_KEY, true);
+            if (!force && AreJumpUiReferencesValid())
+                return;
 
             var settings = LoadOrCreateAsset<PlayerHealthSettings>(SETTINGS_PATH);
             settings.maxHealth = 3;
@@ -61,15 +61,20 @@ namespace Platformer.Editor
             settings.blinkInterval = 0.1f;
             EditorUtility.SetDirty(settings);
 
+            var jumpSettings = LoadOrCreateAsset<PlayerJumpSettings>(JUMP_SETTINGS_PATH);
+            jumpSettings.maxJumpCount = 3;
+            EditorUtility.SetDirty(jumpSettings);
+
             var onHealthChanged = LoadOrCreateAsset<PlayerHealthEvent>(HEALTH_EVENT_PATH);
             var onInvincibilityChanged = LoadOrCreateAsset<PlayerInvincibilityEvent>(INVINCIBILITY_EVENT_PATH);
+            var onJumpCountChanged = LoadOrCreateAsset<PlayerJumpCountEvent>(JUMP_COUNT_EVENT_PATH);
             var onPlayerDied = LoadOrCreateAsset<GameEvent>(DIED_EVENT_PATH);
             var invincibleIconSprite = CreateOrLoadInvincibleIconSprite();
-            var sceneUiPrefab = CreateOrUpdateSceneUiPrefab(onHealthChanged, onPlayerDied);
+            var sceneUiPrefab = CreateOrUpdateSceneUiPrefab(onHealthChanged, onJumpCountChanged, onPlayerDied);
             var invincibilityUiPrefab = CreateOrUpdateInvincibilityUiPrefab(invincibleIconSprite, onInvincibilityChanged);
 
-            AssignPlayerPrefab(settings, onHealthChanged, onInvincibilityChanged, onPlayerDied);
-            BuildSceneHud(settings, onHealthChanged, onInvincibilityChanged, onPlayerDied, sceneUiPrefab, invincibilityUiPrefab);
+            AssignPlayerPrefab(settings, jumpSettings, onHealthChanged, onInvincibilityChanged, onJumpCountChanged, onPlayerDied);
+            BuildSceneHud(settings, jumpSettings, onHealthChanged, onInvincibilityChanged, onJumpCountChanged, onPlayerDied, sceneUiPrefab, invincibilityUiPrefab);
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -108,8 +113,10 @@ namespace Platformer.Editor
 
         private static void AssignPlayerPrefab(
             PlayerHealthSettings settings,
+            PlayerJumpSettings jumpSettings,
             PlayerHealthEvent onHealthChanged,
             PlayerInvincibilityEvent onInvincibilityChanged,
+            PlayerJumpCountEvent onJumpCountChanged,
             GameEvent onPlayerDied)
         {
             if (!File.Exists(PLAYER_PREFAB_PATH))
@@ -122,7 +129,7 @@ namespace Platformer.Editor
                 if (player == null)
                     return;
 
-                AssignPlayerFields(player, settings, onHealthChanged, onInvincibilityChanged, onPlayerDied);
+                AssignPlayerFields(player, settings, jumpSettings, onHealthChanged, onInvincibilityChanged, onJumpCountChanged, onPlayerDied);
                 PrefabUtility.SaveAsPrefabAsset(prefabRoot, PLAYER_PREFAB_PATH);
             }
             finally
@@ -133,8 +140,10 @@ namespace Platformer.Editor
 
         private static void BuildSceneHud(
             PlayerHealthSettings settings,
+            PlayerJumpSettings jumpSettings,
             PlayerHealthEvent onHealthChanged,
             PlayerInvincibilityEvent onInvincibilityChanged,
+            PlayerJumpCountEvent onJumpCountChanged,
             GameEvent onPlayerDied,
             GameObject sceneUiPrefab,
             GameObject invincibilityUiPrefab)
@@ -142,7 +151,7 @@ namespace Platformer.Editor
             var scene = EditorSceneManager.OpenScene(MAIN_SCENE_PATH, OpenSceneMode.Single);
 
             foreach (var player in UnityEngine.Object.FindObjectsByType<PlayerController>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-                AssignPlayerFields(player, settings, onHealthChanged, onInvincibilityChanged, onPlayerDied);
+                AssignPlayerFields(player, settings, jumpSettings, onHealthChanged, onInvincibilityChanged, onJumpCountChanged, onPlayerDied);
 
             RemoveExistingSceneUi();
 
@@ -215,6 +224,7 @@ namespace Platformer.Editor
 
         private static GameObject CreateOrUpdateSceneUiPrefab(
             PlayerHealthEvent onHealthChanged,
+            PlayerJumpCountEvent onJumpCountChanged,
             GameEvent onPlayerDied)
         {
             EnsureFolder(Path.GetDirectoryName(SCENE_UI_PREFAB_PATH)?.Replace("\\", "/"));
@@ -254,11 +264,14 @@ namespace Platformer.Editor
 
                 ConfigureHealthSlider(slider, fill.rectTransform);
 
+                var jumpCountTMP = EnsureChild<TextMeshProUGUI>(hudGroup, "TMP_JumpCount");
+                ConfigureJumpCountText(jumpCountTMP);
+
                 var hud = hudGroup.GetComponent<HUDController>();
                 if (hud == null)
                     hud = hudGroup.gameObject.AddComponent<HUDController>();
 
-                AssignHudFields(hud, slider, fill, onHealthChanged, onPlayerDied);
+                AssignHudFields(hud, slider, fill, jumpCountTMP, onHealthChanged, onJumpCountChanged, onPlayerDied);
 
                 PrefabUtility.SaveAsPrefabAsset(root, SCENE_UI_PREFAB_PATH);
             }
@@ -387,23 +400,29 @@ namespace Platformer.Editor
         private static void AssignPlayerFields(
             PlayerController player,
             PlayerHealthSettings settings,
+            PlayerJumpSettings jumpSettings,
             PlayerHealthEvent onHealthChanged,
             PlayerInvincibilityEvent onInvincibilityChanged,
+            PlayerJumpCountEvent onJumpCountChanged,
             GameEvent onPlayerDied)
         {
             var serializedObject = new SerializedObject(player);
             serializedObject.Update();
             SetObjectReference(serializedObject, "_healthSettings", settings);
+            SetObjectReference(serializedObject, "_jumpSettings", jumpSettings);
             SetObjectReference(serializedObject, "_onHealthChanged", onHealthChanged);
             SetObjectReference(serializedObject, "_onInvincibilityChanged", onInvincibilityChanged);
+            SetObjectReference(serializedObject, "_onJumpCountChanged", onJumpCountChanged);
             SetObjectReference(serializedObject, "_onPlayerDied", onPlayerDied);
             SetObjectReference(serializedObject, "_spriteRenderer", player.GetComponentInChildren<SpriteRenderer>(true));
             serializedObject.ApplyModifiedProperties();
 
             // 프리팹 인스턴스 오버라이드가 남아 있어도 런타임 필드가 같은 이벤트 채널을 보도록 보강한다.
             SetPrivateField(player, "_healthSettings", settings);
+            SetPrivateField(player, "_jumpSettings", jumpSettings);
             SetPrivateField(player, "_onHealthChanged", onHealthChanged);
             SetPrivateField(player, "_onInvincibilityChanged", onInvincibilityChanged);
+            SetPrivateField(player, "_onJumpCountChanged", onJumpCountChanged);
             SetPrivateField(player, "_onPlayerDied", onPlayerDied);
             SetPrivateField(player, "_spriteRenderer", player.GetComponentInChildren<SpriteRenderer>(true));
             EditorUtility.SetDirty(player);
@@ -413,14 +432,18 @@ namespace Platformer.Editor
             HUDController hud,
             Slider slider,
             Image fill,
+            TMP_Text jumpCountTMP,
             PlayerHealthEvent onHealthChanged,
+            PlayerJumpCountEvent onJumpCountChanged,
             GameEvent onPlayerDied)
         {
             var serializedObject = new SerializedObject(hud);
             SetObjectReference(serializedObject, "_onPlayerDied", onPlayerDied);
             SetObjectReference(serializedObject, "_onHealthChanged", onHealthChanged);
+            SetObjectReference(serializedObject, "_onJumpCountChanged", onJumpCountChanged);
             SetObjectReference(serializedObject, "_healthGaugeSlider", slider);
             SetObjectReference(serializedObject, "_healthGaugeFillImg", fill);
+            SetObjectReference(serializedObject, "_remainingJumpCountTMP", jumpCountTMP);
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(hud);
         }
@@ -468,6 +491,145 @@ namespace Platformer.Editor
             slider.navigation = new Navigation { mode = Navigation.Mode.None };
         }
 
+        private static void ConfigureJumpCountText(TextMeshProUGUI jumpCountTMP)
+        {
+            jumpCountTMP.rectTransform.anchorMin = new Vector2(0f, 1f);
+            jumpCountTMP.rectTransform.anchorMax = new Vector2(0f, 1f);
+            jumpCountTMP.rectTransform.pivot = new Vector2(0f, 1f);
+            jumpCountTMP.rectTransform.anchoredPosition = new Vector2(24f, -52f);
+            jumpCountTMP.rectTransform.sizeDelta = new Vector2(180f, 32f);
+            jumpCountTMP.text = "3/3";
+            jumpCountTMP.fontSize = 24f;
+            jumpCountTMP.alignment = TextAlignmentOptions.Left;
+            jumpCountTMP.color = Color.white;
+            jumpCountTMP.raycastTarget = false;
+        }
+
+        public static string ValidateJumpUiReferences()
+        {
+            var jumpSettings = AssetDatabase.LoadAssetAtPath<PlayerJumpSettings>(JUMP_SETTINGS_PATH);
+            var jumpCountEvent = AssetDatabase.LoadAssetAtPath<PlayerJumpCountEvent>(JUMP_COUNT_EVENT_PATH);
+            var playerMessage = ValidatePlayerPrefabJumpReferences(jumpSettings, jumpCountEvent);
+            var hudMessage = ValidateSceneUiPrefabJumpReferences(jumpCountEvent);
+
+            return $"{playerMessage} / {hudMessage}";
+        }
+
+        private static bool AreJumpUiReferencesValid()
+        {
+            var jumpSettings = AssetDatabase.LoadAssetAtPath<PlayerJumpSettings>(JUMP_SETTINGS_PATH);
+            var jumpCountEvent = AssetDatabase.LoadAssetAtPath<PlayerJumpCountEvent>(JUMP_COUNT_EVENT_PATH);
+            if (jumpSettings == null || jumpCountEvent == null)
+                return false;
+
+            return IsPlayerPrefabJumpReferenceValid(jumpSettings, jumpCountEvent)
+                && IsSceneUiPrefabJumpReferenceValid(jumpCountEvent);
+        }
+
+        private static string ValidatePlayerPrefabJumpReferences(
+            PlayerJumpSettings jumpSettings,
+            PlayerJumpCountEvent jumpCountEvent)
+        {
+            if (!File.Exists(PLAYER_PREFAB_PATH))
+                return "Player prefab 없음";
+
+            var prefabRoot = PrefabUtility.LoadPrefabContents(PLAYER_PREFAB_PATH);
+            try
+            {
+                var player = prefabRoot.GetComponentInChildren<PlayerController>(true);
+                if (player == null)
+                    return "PlayerController 없음";
+
+                var serializedObject = new SerializedObject(player);
+                var connectedJumpSettings = serializedObject.FindProperty("_jumpSettings")?.objectReferenceValue;
+                var connectedJumpCountEvent = serializedObject.FindProperty("_onJumpCountChanged")?.objectReferenceValue;
+                var isJumpSettingsConnected = connectedJumpSettings == jumpSettings;
+                var isJumpCountEventConnected = connectedJumpCountEvent == jumpCountEvent;
+
+                return isJumpSettingsConnected && isJumpCountEventConnected
+                    ? "Player 점프 참조 정상"
+                    : $"Player 점프 참조 오류(settings={isJumpSettingsConnected}, event={isJumpCountEventConnected})";
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(prefabRoot);
+            }
+        }
+
+        private static string ValidateSceneUiPrefabJumpReferences(PlayerJumpCountEvent jumpCountEvent)
+        {
+            if (!File.Exists(SCENE_UI_PREFAB_PATH))
+                return "SceneUI prefab 없음";
+
+            var prefabRoot = PrefabUtility.LoadPrefabContents(SCENE_UI_PREFAB_PATH);
+            try
+            {
+                var hud = prefabRoot.GetComponentInChildren<HUDController>(true);
+                if (hud == null)
+                    return "HUDController 없음";
+
+                var serializedObject = new SerializedObject(hud);
+                var connectedJumpCountEvent = serializedObject.FindProperty("_onJumpCountChanged")?.objectReferenceValue;
+                var connectedJumpCountTMP = serializedObject.FindProperty("_remainingJumpCountTMP")?.objectReferenceValue;
+                var isJumpCountEventConnected = connectedJumpCountEvent == jumpCountEvent;
+                var isJumpCountTMPConnected = connectedJumpCountTMP != null;
+
+                return isJumpCountEventConnected && isJumpCountTMPConnected
+                    ? "HUD 점프 참조 정상"
+                    : $"HUD 점프 참조 오류(event={isJumpCountEventConnected}, tmp={isJumpCountTMPConnected})";
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(prefabRoot);
+            }
+        }
+
+        private static bool IsPlayerPrefabJumpReferenceValid(
+            PlayerJumpSettings jumpSettings,
+            PlayerJumpCountEvent jumpCountEvent)
+        {
+            if (!File.Exists(PLAYER_PREFAB_PATH))
+                return false;
+
+            var prefabRoot = PrefabUtility.LoadPrefabContents(PLAYER_PREFAB_PATH);
+            try
+            {
+                var player = prefabRoot.GetComponentInChildren<PlayerController>(true);
+                if (player == null)
+                    return false;
+
+                var serializedObject = new SerializedObject(player);
+                return serializedObject.FindProperty("_jumpSettings")?.objectReferenceValue == jumpSettings
+                    && serializedObject.FindProperty("_onJumpCountChanged")?.objectReferenceValue == jumpCountEvent;
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(prefabRoot);
+            }
+        }
+
+        private static bool IsSceneUiPrefabJumpReferenceValid(PlayerJumpCountEvent jumpCountEvent)
+        {
+            if (!File.Exists(SCENE_UI_PREFAB_PATH))
+                return false;
+
+            var prefabRoot = PrefabUtility.LoadPrefabContents(SCENE_UI_PREFAB_PATH);
+            try
+            {
+                var hud = prefabRoot.GetComponentInChildren<HUDController>(true);
+                if (hud == null)
+                    return false;
+
+                var serializedObject = new SerializedObject(hud);
+                return serializedObject.FindProperty("_onJumpCountChanged")?.objectReferenceValue == jumpCountEvent
+                    && serializedObject.FindProperty("_remainingJumpCountTMP")?.objectReferenceValue != null;
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(prefabRoot);
+            }
+        }
+
         private static void SetPrivateField<TValue>(PlayerController player, string fieldName, TValue value)
         {
             var field = typeof(PlayerController).GetField(
@@ -485,7 +647,19 @@ namespace Platformer.Editor
         public static object HandleCommand(JObject parameters)
         {
             PlayerHealthUiSceneSetup.Apply(true);
-            return new SuccessResponse("Player health UI scene setup completed.");
+            var validation = PlayerHealthUiSceneSetup.ValidateJumpUiReferences();
+            return new SuccessResponse($"Player health UI scene setup completed. {validation}");
+        }
+    }
+
+    [UnityCliTool(Name = "player_jump_ui_reference_fix", Description = "플레이어 점프 횟수 설정/이벤트와 HUD TMP 참조를 재생성하고 연결 상태를 검증한다.")]
+    public static class PlayerJumpUiReferenceFixTool
+    {
+        public static object HandleCommand(JObject parameters)
+        {
+            PlayerHealthUiSceneSetup.Apply(true);
+            var validation = PlayerHealthUiSceneSetup.ValidateJumpUiReferences();
+            return new SuccessResponse(validation);
         }
     }
 
