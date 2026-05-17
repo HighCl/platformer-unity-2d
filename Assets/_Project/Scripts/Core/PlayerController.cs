@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
@@ -5,10 +6,23 @@ using Platformer.Data;
 
 namespace Platformer.Core
 {
+    [RequireComponent(typeof(Rigidbody2D))]
     public class PlayerController : MonoBehaviour, IDamageable
     {
+        #region 상수
+        private const int DEFAULT_MAX_HEALTH = 3;
+        private const float DEFAULT_INVINCIBLE_DURATION = 0.75f;
+        private const float DEFAULT_BLINK_INTERVAL = 0.1f;
+        private const float MIN_BLINK_INTERVAL = 0.02f;
+        #endregion
+
         #region 변수
         [SerializeField] private RespawnData _respawnData;
+        [SerializeField] private PlayerHealthSettings _healthSettings;
+        [SerializeField] private PlayerHealthEvent _onHealthChanged;
+        [SerializeField] private PlayerInvincibilityEvent _onInvincibilityChanged;
+        [SerializeField] private GameEvent _onPlayerDied;
+        [SerializeField] private SpriteRenderer _spriteRenderer;
         [SerializeField] private float _moveSpeed = 5f;
         [SerializeField] private float _jumpForce = 10f;
         [SerializeField] private int _maxAirJumps = 1;
@@ -29,9 +43,30 @@ namespace Platformer.Core
         private bool _isJumpRequested;
         private bool _isAirJumpPending;
         private int _airJumpsRemaining;
+        private int _currentHealth;
         private float _defaultGravityScale;
+        private bool _defaultSpriteRendererEnabled = true;
+        private bool _isInvincible;
         private bool _isDead;
+        private Coroutine _invincibilityCoroutine;
         private Collider2D[] _groundOverlapResults;
+        #endregion
+
+        #region 프로퍼티
+        public int CurrentHealth => _currentHealth;
+        public int MaxHealth => _healthSettings != null
+            ? Mathf.Max(1, _healthSettings.maxHealth)
+            : DEFAULT_MAX_HEALTH;
+        public bool IsInvincible => _isInvincible;
+        public bool IsDead => _isDead;
+
+        private float InvincibleDuration => _healthSettings != null
+            ? Mathf.Max(0f, _healthSettings.invincibleDuration)
+            : DEFAULT_INVINCIBLE_DURATION;
+
+        private float BlinkInterval => _healthSettings != null
+            ? Mathf.Max(MIN_BLINK_INTERVAL, _healthSettings.blinkInterval)
+            : DEFAULT_BLINK_INTERVAL;
         #endregion
 
         #region 유니티 라이프사이클
@@ -40,12 +75,20 @@ namespace Platformer.Core
             _rb = GetComponent<Rigidbody2D>();
             _animator = GetComponent<Animator>();
             _input = new InputSystem_Actions();
+            _currentHealth = MaxHealth;
             _defaultGravityScale = _rb.gravityScale;
+            if (_spriteRenderer == null)
+                _spriteRenderer = GetComponentInChildren<SpriteRenderer>(true);
+            if (_spriteRenderer != null)
+                _defaultSpriteRendererEnabled = _spriteRenderer.enabled;
             _groundOverlapResults = new Collider2D[Mathf.Max(1, _groundOverlapCapacity)];
         }
 
         void OnEnable()
         {
+            if (_input == null)
+                _input = new InputSystem_Actions();
+
             _input.Player.Enable();
         }
 
@@ -53,6 +96,9 @@ namespace Platformer.Core
         {
             if (_respawnData != null && _respawnData.hasCheckpoint)
                 transform.position = _respawnData.position;
+
+            _RaiseHealthChanged();
+            _RaiseInvincibilityChanged();
         }
 
         void Update()
@@ -60,11 +106,8 @@ namespace Platformer.Core
             if (_isDead)
                 return;
 
-            if (transform.position.y < _fallDeathThreshold)
-            {
-                _Die();
+            if (TryApplyFallDeath())
                 return;
-            }
 
             var raw = _input.Player.Move.ReadValue<Vector2>();
             _moveInput = raw.x != 0f ? Mathf.Sign(raw.x) : 0f;
@@ -127,21 +170,137 @@ namespace Platformer.Core
 
         void OnDisable()
         {
-            _input.Player.Disable();
+            if (_input != null)
+                _input.Player.Disable();
+
+            _StopInvincibility();
         }
         #endregion
 
         #region Public 메서드
         public void TakeDamage(int amount)
         {
-            if (_isDead || amount <= 0)
+            if (_isDead || amount <= 0 || !_CanTakeDamage())
                 return;
 
+            var nextHealth = _currentHealth - amount;
+            if (nextHealth <= 0)
+            {
+                _Die();
+                return;
+            }
+
+            _SetCurrentHealth(nextHealth);
+            _StartInvincibility();
+        }
+
+        public bool TryApplyFallDeath()
+        {
+            if (_isDead || transform.position.y >= _fallDeathThreshold)
+                return false;
+
+            // 낙사는 남은 체력과 무관하게 즉시 사망 처리한다.
             _Die();
+            return true;
         }
         #endregion
 
         #region Private 메서드
+        private bool _CanTakeDamage()
+        {
+            return !_isInvincible;
+        }
+
+        private void _SetCurrentHealth(int value, bool shouldForceRaise = false)
+        {
+            var clampedValue = Mathf.Clamp(value, 0, MaxHealth);
+            if (_currentHealth == clampedValue && !shouldForceRaise)
+                return;
+
+            _currentHealth = clampedValue;
+            _RaiseHealthChanged();
+        }
+
+        private void _RaiseHealthChanged()
+        {
+            if (_onHealthChanged != null)
+                _onHealthChanged.Raise(_currentHealth, MaxHealth);
+        }
+
+        private void _RaiseInvincibilityChanged()
+        {
+            if (_onInvincibilityChanged != null)
+                _onInvincibilityChanged.Raise(_isInvincible);
+        }
+
+        private void _StartInvincibility()
+        {
+            if (InvincibleDuration <= 0f)
+                return;
+
+            _SetInvincible(true);
+
+            if (!Application.isPlaying || !isActiveAndEnabled)
+                return;
+
+            if (_invincibilityCoroutine != null)
+                StopCoroutine(_invincibilityCoroutine);
+
+            _invincibilityCoroutine = StartCoroutine(_CoInvincibility(InvincibleDuration));
+        }
+
+        private void _StopInvincibility()
+        {
+            if (_invincibilityCoroutine != null)
+            {
+                StopCoroutine(_invincibilityCoroutine);
+                _invincibilityCoroutine = null;
+            }
+
+            _RestoreSpriteRendererVisibility();
+            _SetInvincible(false);
+        }
+
+        private IEnumerator _CoInvincibility(float duration)
+        {
+            var endTime = Time.time + duration;
+            var waitTime = BlinkInterval;
+
+            while (Time.time < endTime && !_isDead)
+            {
+                _SetSpriteRendererBlinkVisible(false);
+                yield return new WaitForSeconds(waitTime);
+
+                _SetSpriteRendererBlinkVisible(true);
+                yield return new WaitForSeconds(waitTime);
+            }
+
+            _RestoreSpriteRendererVisibility();
+            _SetInvincible(false);
+            _invincibilityCoroutine = null;
+        }
+
+        private void _SetInvincible(bool isInvincible)
+        {
+            if (_isInvincible == isInvincible)
+                return;
+
+            _isInvincible = isInvincible;
+            _RaiseInvincibilityChanged();
+        }
+
+        private void _SetSpriteRendererBlinkVisible(bool isVisible)
+        {
+            if (_spriteRenderer != null)
+                _spriteRenderer.enabled = _defaultSpriteRendererEnabled && isVisible;
+        }
+
+        private void _RestoreSpriteRendererVisibility()
+        {
+            if (_spriteRenderer != null)
+                _spriteRenderer.enabled = _defaultSpriteRendererEnabled;
+        }
+
         private bool _IsGrounded()
         {
             if (_groundCheck == null)
@@ -217,7 +376,16 @@ namespace Platformer.Core
 
         private void _Die()
         {
+            if (_isDead)
+                return;
+
             _isDead = true;
+            _StopInvincibility();
+            _SetCurrentHealth(0, true);
+
+            if (_onPlayerDied != null)
+                _onPlayerDied.Raise();
+
             _moveInput = 0f;
             _isJumpRequested = false;
             _isAirJumpPending = false;
@@ -241,7 +409,8 @@ namespace Platformer.Core
                     _animator.Play(deathStateHash, 0, 0f);
             }
 
-            Invoke(nameof(_ReloadCurrentScene), _deathReloadDelay);
+            if (Application.isPlaying)
+                Invoke(nameof(_ReloadCurrentScene), _deathReloadDelay);
         }
 
         private void _ReloadCurrentScene()

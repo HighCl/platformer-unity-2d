@@ -1,17 +1,12 @@
 {
-    "name": "Platformer.UI.Tests",
-    "rootNamespace": "Platformer.UI.Tests",
+    "name": "Platformer.Game.PlayModeTests",
+    "rootNamespace": "Platformer.Game.PlayModeTests",
     "references": [
         "Platformer.Data",
         "Platformer.Core",
-        "Platformer.UI",
-        "UnityEngine.UI",
-        "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "Platformer.Game"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,
@@ -23,5 +18,8 @@
         "UNITY_INCLUDE_TESTS"
     ],
     "versionDefines": [],
-    "noEngineReferences": false
+    "noEngineReferences": false,
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
 }

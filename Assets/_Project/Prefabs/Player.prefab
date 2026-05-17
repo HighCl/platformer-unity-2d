@@ -180,11 +180,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 133407924e2df4a45a5ff9dfb16a6de2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _respawnData: {fileID: 0}
+  _healthSettings: {fileID: 11400000, guid: a983bd1b6b2456548a59e5c5f4bb4f8b, type: 2}
+  _onHealthChanged: {fileID: 11400000, guid: 78942ac5fee75d54981c068a93091bd4, type: 2}
+  _onInvincibilityChanged: {fileID: 11400000, guid: bee6633800760fd479f1cb4a617e6a6e, type: 2}
+  _onPlayerDied: {fileID: 11400000, guid: eaf4ab20dbf634b4a88affa2f0b8060c, type: 2}
+  _spriteRenderer: {fileID: 700000}
+  _moveSpeed: 5
+  _jumpForce: 10
+  _maxAirJumps: 1
+  _fallGravityMultiplier: 2.5
+  _fallDeathThreshold: -10
   _groundCheck: {fileID: 410000}
   _groundCheckRadius: 0.15
   _groundLayer:
     serializedVersion: 2
     m_Bits: 0
+  _groundOverlapCapacity: 8
+  _deathReloadDelay: 1
+  _deathTriggerName: Die
 --- !u!1 &110000
 GameObject:
   m_ObjectHideFlags: 0

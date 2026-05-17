@@ -1,12 +1,19 @@
 {
-    "name": "Platformer.UI",
-    "rootNamespace": "Platformer.UI",
+    "name": "Platformer.Editor",
+    "rootNamespace": "Platformer.Editor",
     "references": [
         "Platformer.Data",
         "Platformer.Core",
-        "UnityEngine.UI"
+        "Platformer.Game",
+        "Platformer.UI",
+        "UnityEditor.TestRunner",
+        "UnityEngine.TestRunner",
+        "UnityEngine.UI",
+        "UnityCliConnector.Editor"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
